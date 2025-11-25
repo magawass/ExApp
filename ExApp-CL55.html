@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -37,7 +37,7 @@
         }
         
         /* --- START OF DATA ENTRY / ADMIN PANEL CENTERING FIX --- */
-        #dataEntry, #adminPanel {
+        #dataEntry, #adminPanel, #dataAnalysis {
             /* Center the content block horizontally */
             display: flex;
             flex-direction: column;
@@ -76,7 +76,7 @@
         }
         
         /* Dropdowns/Selects in Data Entry Page - Ensure white background and black text */
-        #dataEntry select, #adminPanel select, #adminPanel input[type="text"] {
+        #dataEntry select, #adminPanel select, #adminPanel input[type="text"], #dataAnalysis select {
             background-color: white;
             color: black;
             border: 1px solid #ccc;
@@ -115,7 +115,7 @@
         }
         
         /* Sheet/Report Styles */
-        #gradesSheet .sheet-content, #markSheet .sheet-content {
+        #gradesSheet .sheet-content, #markSheet .sheet-content, #dataAnalysisResults .sheet-content {
              background-color: white;
              color: black;
              padding: 20px;
@@ -153,6 +153,36 @@
         #gradesTable th:nth-child(1), #gradesTable th:nth-child(2),
         #marksTable th:nth-child(1), #marksTable th:nth-child(2) {
             text-align: left;
+        }
+        
+        /* NEW: Styles for the Data Analysis Table (Black lines and distinct columns/rows) */
+        #analysisTable {
+            width: 100%;
+            min-width: 1000px; /* Ensure wide enough for 12 columns */
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 10pt;
+            /* Ensure the table itself has a black border */
+            border: 1px solid black; 
+        }
+
+        #analysisTable th, #analysisTable td {
+            /* Black lines */
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center; 
+            color: black;
+            white-space: nowrap; 
+        }
+
+        #analysisTable th {
+            background-color: #eee;
+            font-weight: bold;
+        }
+        /* Explicitly left align the first column (GRADES) */
+        #analysisTable td:nth-child(1), #analysisTable th:nth-child(1) {
+            text-align: left;
+            font-weight: bold;
         }
 
         /* --- LOGO FIX: Styling for actual image (Applied from previous correction) --- */
@@ -240,7 +270,7 @@
             text-align: center;
         }
         /* Center Position in the Progress Report table (4th column) */
-        #resultsTable td:nth-child(4) {
+        #resultsTable td:nth-align-child(4) {
             text-align: center;
         }
 
@@ -309,7 +339,7 @@
             }
             
             /* Hide all pages except the Progress Report when printing */
-            body > .page:not(#progressReport) {
+            body > .page:not(#progressReport):not(#dataAnalysisResults) {
                 display: none !important;
             }
             
@@ -322,6 +352,19 @@
                 padding: 100px 40px 40px 40px !important; 
                 box-shadow: none !important; 
                 display: block !important;
+            }
+
+            /* Ensure Data Analysis Results page prints correctly */
+            #dataAnalysisResults {
+                display: block !important;
+                width: auto !important;
+                min-height: auto !important;
+                margin: 0 !important;
+                padding: 20px !important;
+            }
+            #dataAnalysisResults .back-btn,
+            #dataAnalysisResults .view-btn {
+                display: none !important;
             }
             
             /* Hide the back and print/save buttons in the print view */
@@ -339,8 +382,6 @@
             <img src="assets/logo.png" class="logo" alt="School Logo">
             <h2 style="margin-top: 5px;">MAGAWA SECONDARY SCHOOL</h2>
             <h3 style="margin-top: 3px;">Exam Department</h3>   
-            <label for="username">Username:</label>
-            <input type="text" id="username" placeholder="Enter username">
             
             <label for="password">Password:</label>
             <input type="password" id="password" placeholder="Enter password">
@@ -394,6 +435,8 @@
             <button class="view-btn" onclick="viewGradesSheet()">View Grade Sheet</button>
             <button class="view-btn" onclick="viewMarkSheet()">View Mark Sheet</button>
             <button class="view-btn" onclick="viewProgressReport()">View Progress Report</button>
+            
+            <button class="admin-btn" onclick="goToPage('dataAnalysis')">DATA ANALYSIS Page</button>
         </div>
         
         <button class="admin-btn" style="margin-top: 30px;" onclick="showAdminPrompt()">Admin Button</button>
@@ -405,8 +448,22 @@
         
         <div class="page-content-wrapper">
             
-            <h3>File Operations</h3>
-            <label for="csvClassSelect">Select Class for CSV Upload:</label>
+            <h3>Data Persistence (GitHub)</h3>
+            <p style="font-size: 0.9em; margin-bottom: 5px;">
+                Enter your **GitHub Personal Access Token (PAT)** with **repo scope** to save/upload data.<br>
+                **Token is only used when the 'Save' or 'Upload' buttons below are clicked.**
+            </p>
+            <input type="password" id="githubToken" placeholder="Enter GitHub PAT" style="width: 100%;">
+            
+            <button id="saveAllDataButton" onclick="saveAllDataToExAppRepo()">
+                💾 Save ALL In-Memory Data (Scores, Teachers, Settings)
+            </button>
+            <p id="persistenceMessage" style="color: yellow; margin-top: 10px;">Load status: Loading data from GitHub...</p>
+            
+            <hr style="border-top: 1px solid white; margin: 15px 0;">
+            
+            <h3>File Operations (Student Roster)</h3>
+            <label for="csvClassSelect">Select Class for Student Roster File:</label>
             <select id="csvClassSelect">
                 <option value="Form1">Form 1</option>
                 <option value="Form2">Form 2</option>
@@ -414,11 +471,19 @@
                 <option value="Form4">Form 4</option>
             </select>
             
-            <label for="csvUpload" style="margin-top: 10px;">Upload CSV Files/Edit/Delete files:</label>
+            <label for="csvUpload" style="margin-top: 10px;">Select Local CSV to Upload:</label>
             <input type="file" id="csvUpload" accept=".csv" style="width: auto; margin-right: 10px; display: block;" onchange="toggleUploadButton()">
             
-            <button id="uploadButton" onclick="handleCsvUpload()" disabled>Upload/Update Student List</button> 
-            <p style="font-size: 0.9em;">(CSV files contain Exam Number and Student's Name)</p>
+            <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
+                <button id="uploadButton" onclick="handleCsvUpload()" disabled style="flex-grow: 1;">
+                    Upload/Overwrite Student List
+                </button> 
+                <button id="deleteCsvButton" onclick="deleteStudentCsv()" style="flex-grow: 1; background-color: #bb1111;" disabled>
+                    Delete Student Roster File
+                </button>
+            </div>
+
+            <p style="font-size: 0.9em;">(Upload/Delete operations target the student roster file for the selected class.)</p>
             
             <hr style="border-top: 1px solid white; margin: 15px 0;">
             
@@ -463,6 +528,40 @@
             <button onclick="saveAdminSettings()">Save Settings</button>
         </div>
     </div>
+    
+    <div id="dataAnalysis" class="page">
+        <button class="back-btn" onclick="goToPage('dataEntry')">Back</button>
+        <h2 style="color: white; text-align: center;">📊 Class Data Analysis</h2>
+        
+        <div class="page-content-wrapper" style="text-align: center;">
+            <label for="analysisClassSelect" style="display: block; margin-bottom: 10px;">Select Class to Analyze:</label>
+            <select id="analysisClassSelect" style="width: 100%; max-width: 300px; margin: 0 auto 20px;">
+                <option value="Form1">Form 1</option>
+                <option value="Form2">Form 2</option>
+                <option value="Form3">Form 3</option>
+                <option value="Form4">Form 4</option>
+            </select>
+            
+            <button class="view-btn" onclick="analyzeData()">View Results</button> 
+        </div>
+    </div>
+    
+    <div id="dataAnalysisResults" class="page">
+        <button class="back-btn" onclick="goToPage('dataAnalysis')">Back</button>
+        <h2 style="color: white; text-align: center;">📈 Analysis Results for <span id="analysisClassDisplay"></span></h2>
+        
+        <div class="sheet-content">
+            <div style="text-align: right; margin-bottom: 10px;">
+                <button onclick="window.print()">Print</button>
+                <button onclick="exportTableData('analysisTable', 'DataAnalysisReport', 'csv')">Save as CSV</button>
+                <button onclick="exportTableData('analysisTable', 'DataAnalysisReport', 'excel')">Export Excel</button>
+            </div>
+            
+            <p style="color: black; font-weight: bold; margin-bottom: 10px;">Grade Distribution and Performance Summary:</p>
+            <table id="analysisTable" style="width: 100%; min-width: 1000px; border-collapse: collapse;">
+                </table>
+        </div>
+    </div>
 
     <div id="gradesSheet" class="page">
         <button class="back-btn" onclick="goToPage('dataEntry')">Back</button>
@@ -491,6 +590,10 @@
             <button onclick="alert('Saving as PDF...')">Save as PDF</button>
             <button onclick="exportTableData('marksTable', 'MarkSheet', 'csv')">Save as CSV</button>
             <button onclick="exportTableData('marksTable', 'MarkSheet', 'excel')">Export Excel</button>
+            
+            <button id="saveMarkSheetToRepoButton" class="admin-btn" onclick="exportMarkSheetToMRepo()" style="margin-left: 10px;">
+                Save Scores to 'm' Repo
+            </button>
             
             <p style="color: black;">Mark Data (Raw Scores - Alphabetical Subjects):</p>
             <table id="marksTable">
@@ -570,40 +673,42 @@
     </div>
 
 <script>
+    // --- GITHUB CONFIGURATION ---
+    const GITHUB_OWNER = 'magawass'; // Your GitHub Username
+    const GITHUB_REPO_EXAPP = 'ExApp'; // Main Data Repo
+    const GITHUB_REPO_M = 'm';        // New Export Repo
+    
+    const ADMIN_SETTINGS_FILE = 'settings.csv';
+    const TEACHER_FILE = 'teachers.csv';
+    const STUDENT_FILE_SUFFIX = '_data.csv';
+
     // --- MOCK DATABASE (In-Memory Storage) ---
-    // This is the default list. It will be overwritten by a successful CSV upload.
-    const MOCK_STUDENTS_BY_CLASS = {
-        'Form1': {
-            'Ex001': { name: 'Alice Mwale', Form: 'Form1', scores: {}, grades: {} },
-            'Ex004': { name: 'David Jones', Form: 'Form1', scores: {}, grades: {} },
-        },
-        'Form2': {
-            'Ex006': { name: 'Grace Phiri', Form: 'Form2', scores: {}, grades: {} },
-        },
-        'Form3': {
-            'Ex002': { name: 'Brian Phiri', Form: 'Form3', scores: {}, grades: {} },
-            'Ex005': { name: 'Faith Kanyemba', Form: 'Form3', scores: {}, grades: {} },
-        },
-        'Form4': {
-            'Ex003': { name: 'Cathy Tembo', Form: 'Form4', scores: {}, grades: {} },
-        }
+    // Will be overwritten by successful load from GitHub
+    let MOCK_STUDENTS_BY_CLASS = {
+        'Form1': {}, 'Form2': {}, 'Form3': {}, 'Form4': {}
     };
 
     const ALL_SUBJECTS = ["Agriculture", "Bible Knowledge", "Biology", "Chemistry", "Chichewa", "English", "Geography", "History", "Mathematics", "Physics", "Social/Life"];
     
     // Global storage for subject-teacher assignments
     let SUBJECT_TEACHERS = {};
-    // Default teacher is a hyphen ('-')
     const DEFAULT_TEACHER = "-"; 
 
     let currentClass = 'Form1'; // Default
-    let selectedExamNo = 'Ex001'; // Default
+    let selectedExamNo = null; // Default
     
-    // NEW GLOBAL: Store the selected term (Default to 1)
+    // Global: Store the selected term (Default to 1)
     let currentTerm = '1'; 
+    let generalComment = ''; // Global storage for admin comment
+    
+    // Global SHAs for persistence tracking (crucial for updating GitHub files)
+    let studentDataShas = {}; // e.g., {'Form1': 'sha_hash_value'} - ONLY for EXAPP repo
+    let teacherSha = null;
+    let settingsSha = null; 
+    let isDataLoaded = false;
 
 
-    // --- GRADING KEY DATA STRUCTURES ---
+    // --- GRADING KEY DATA STRUCTURES (Unchanged) ---
     const GRADE_KEY_F1_F2 = [
         { range: '80 - 100', grade: 'A', remark: 'Excellent' },
         { range: '65 - 79', grade: 'B', remark: 'Very Good' },
@@ -613,60 +718,676 @@
     ];
 
     const GRADE_KEY_F3_F4 = [
-        { range: '80 - 100', grade: '1-2', remark: 'Distinction' },
-        { range: '70 - 79', grade: '3-4', remark: 'Strong Credit' },
-        { range: '60 - 69', grade: '5-6', remark: 'Credit' },
-        { range: '45 - 59', grade: '7-8', remark: 'Pass' },
-        { range: '0 - 44', grade: '9', remark: 'Fail' },
+        { range: '80 - 100', grade: '1', remark: 'Distinction' },
+        { range: '75 - 79', grade: '2', remark: 'Distinction' },
+        { range: '70 - 74', grade: '3', remark: 'Strong Credit' },
+        { range: '65 - 69', grade: '4', remark: 'Strong Credit' },
+        { range: '60 - 64', grade: '5', remark: 'Credit' },
+        { range: '55 - 59', grade: '6', 'remark': 'Credit' },
+        { range: '45 - 54', grade: '7', remark: 'Pass' },
+        { range: '35 - 44', grade: '8', remark: 'Pass' },
+        { range: '0 - 34', grade: '9', remark: 'Fail' },
     ];
     // --- END GRADING KEY DATA STRUCTURES ---
 
 
-    // --- UTILITY FUNCTIONS ---
+    // ----------------------------------------------------------------------
+    // --- GITHUB PERSISTENCE FUNCTIONS (Refactored for Repo Name) ---
+    // ----------------------------------------------------------------------
 
-    function getStudent(examNo) {
-        for (const className in MOCK_STUDENTS_BY_CLASS) {
-            if (MOCK_STUDENTS_BY_CLASS[className][examNo]) {
-                return MOCK_STUDENTS_BY_CLASS[className][examNo];
+    /**
+     * Generic function to fetch a file from the specified GitHub repository.
+     */
+    async function fetchFileFromRepo(repoName, filePath) {
+        // Dynamic URL construction based on repoName
+        const url = `https://api.github.com/repos/${GITHUB_OWNER}/${repoName}/contents/data/${filePath}`;
+        
+        try {
+            const response = await fetch(url);
+            
+            // 404 means file doesn't exist, which is fine for first run or export target
+            if (response.status === 404) {
+                console.log(`File not found in ${repoName} repo: ${filePath}`);
+                return { content: '', sha: null };
+            }
+            if (!response.ok) {
+                throw new Error(`GitHub API error (${repoName}): ${response.status} ${response.statusText}`);
+            }
+            
+            const json = await response.json();
+            
+            // Content is always Base64 encoded by GitHub
+            const decodedContent = atob(json.content); 
+            return {
+                content: decodedContent,
+                sha: json.sha
+            };
+
+        } catch (error) {
+            console.error(`Error fetching from ${repoName}/${filePath}:`, error);
+            return { content: '', sha: null }; 
+        }
+    }
+
+    /**
+     * Generic function to save (PUT) or delete (DELETE) a file to/from the specified GitHub repo.
+     */
+    async function saveFileToRepo(repoName, filePath, content, sha, token, message, method = 'PUT') {
+        // Dynamic URL construction based on repoName
+        const url = `https://api.github.com/repos/${GITHUB_OWNER}/${repoName}/contents/data/${filePath}`;
+        
+        if (!token) {
+            throw new Error("GitHub Personal Access Token (PAT) is required to save data.");
+        }
+        
+        const headers = {
+            'Authorization': `token ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        const body = {
+            message: message,
+            branch: 'main' // Assumes 'main' branch
+        };
+
+        if (method === 'PUT') {
+            const base64Content = btoa(content); // Encode content to Base64
+            body.content = base64Content;
+            // SHA is mandatory for updating existing files. Omit for creating new files.
+            if (sha) body.sha = sha; 
+        } else if (method === 'DELETE') {
+            // SHA is mandatory for deleting existing files
+            if (!sha) {
+                 throw new Error("SHA is required to delete a file.");
+            }
+            body.sha = sha;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: headers,
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`GitHub ${method} Error (${repoName}, ${response.status}): ${errorData.message}`);
+            }
+            
+            const successData = await response.json();
+            // Return the new SHA (or null for delete)
+            return successData.content ? successData.content.sha : null; 
+
+        } catch (error) {
+            console.error(`Failed to ${method === 'PUT' ? 'save' : 'delete'} ${repoName}/${filePath}:`, error);
+            throw error; // Re-throw to be caught by the caller
+        }
+    }
+
+
+    /**
+     * Loads ALL persistent data (Student scores, Teachers, Settings) from the main (ExApp) GitHub repository.
+     */
+    async function loadAllDataFromExAppRepo() {
+        const statusMsg = document.getElementById('persistenceMessage');
+        statusMsg.textContent = "Loading data from GitHub...";
+        statusMsg.style.color = 'yellow';
+
+        const classes = Object.keys(MOCK_STUDENTS_BY_CLASS);
+        let studentCount = 0;
+        
+        // 1. Load Student Data (Scores/Rosters) from EXAPP
+        for (const className of classes) {
+            const filePath = className + STUDENT_FILE_SUFFIX;
+            const { content, sha } = await fetchFileFromRepo(GITHUB_REPO_EXAPP, filePath);
+
+            if (content) {
+                const students = parseCsvToStudents(content, className);
+                MOCK_STUDENTS_BY_CLASS[className] = students;
+                studentDataShas[className] = sha;
+                studentCount += Object.keys(students).length;
+            } else {
+                 studentDataShas[className] = null;
             }
         }
-        return null;
-    }
 
-    // Helper to get a consistent numeric grade for sorting (lower is better)
-    function getNumericGradeForSorting(form, grade) {
-        if (grade === 'X' || grade === '-') return 100; // Arbitrarily high for sorting down
-
-        if (form === 'Form1' || form === 'Form2') {
-            // Map F1/F2 grades to a numeric value for comparison/sorting (Lower is better)
-            if (grade === 'A') return 1;
-            if (grade === 'B') return 4; 
-            if (grade === 'C') return 6; 
-            if (grade === 'D') return 8; 
-            if (grade === 'F') return 9;
+        // 2. Load Teacher Assignments from EXAPP
+        const { content: teacherContent, sha: tSha } = await fetchFileFromRepo(GITHUB_REPO_EXAPP, TEACHER_FILE);
+        if (teacherContent) {
+            SUBJECT_TEACHERS = parseTeacherCsv(teacherContent);
+            teacherSha = tSha;
+            updateAssignmentsDisplay();
+        } else {
+            teacherSha = null;
         }
 
-        // Forms 3/4 grades are already numeric 1-9
-        const numeric = parseInt(grade);
-        if (!isNaN(numeric) && numeric >= 1 && numeric <= 9) {
-            return numeric;
+        // 3. Load Admin Settings from EXAPP
+        const { content: settingsContent, sha: sSha } = await fetchFileFromRepo(GITHUB_REPO_EXAPP, ADMIN_SETTINGS_FILE);
+        if (settingsContent) {
+            const settings = parseSettingsCsv(settingsContent);
+            currentTerm = settings.term || '1';
+            generalComment = settings.comment || '';
+            settingsSha = sSha;
+            
+            // Update UI elements based on loaded settings
+            document.getElementById('termSelect').value = currentTerm;
+            document.getElementById('generalComment').value = generalComment;
+            const reportTermSpan = document.getElementById('reportTerm');
+            if (reportTermSpan) reportTermSpan.textContent = currentTerm;
+        } else {
+            settingsSha = null;
         }
-        return 100;
+
+        if (studentCount > 0) {
+            isDataLoaded = true;
+            statusMsg.textContent = `✅ Loaded data for ${studentCount} students.`;
+            statusMsg.style.color = 'lightgreen';
+            updateSubjectSelect(); // Populate subject dropdowns
+            updateStudentSelect(); // Populate student dropdowns for default class
+        } else {
+            isDataLoaded = true; // Still loaded, just no data found
+            statusMsg.textContent = "⚠️ Loaded, but no student data found in repo. Ready.";
+            statusMsg.style.color = 'yellow';
+            updateSubjectSelect();
+            updateStudentSelect();
+        }
     }
 
-
-    // --- GRADING FUNCTIONS (Unchanged) ---
-
-    function getGradeAndRemark(form, score) {
-        if (score === null || score === undefined || score === '') return { grade: '-', remark: 'No score' };
+    /**
+     * Saves ALL persistent data (Student scores, Teachers, Settings) to the main (ExApp) GitHub repository.
+     */
+    async function saveAllDataToExAppRepo() {
+        const token = document.getElementById('githubToken').value.trim();
+        const statusMsg = document.getElementById('persistenceMessage');
         
-        const scoreInput = String(score).toUpperCase();
+        if (!token) {
+            statusMsg.textContent = "❌ Please enter GitHub PAT to save data.";
+            statusMsg.style.color = 'red';
+            return;
+        }
+
+        statusMsg.textContent = "💾 Saving data to ExApp repo... Please wait.";
+        statusMsg.style.color = 'yellow';
+
+        try {
+            // 1. Save Student/Score Data (Class by Class)
+            const classes = Object.keys(MOCK_STUDENTS_BY_CLASS);
+            for (const className of classes) {
+                const filePath = className + STUDENT_FILE_SUFFIX;
+                const students = MOCK_STUDENTS_BY_CLASS[className];
+                const content = studentsToCsv(students);
+                const currentSha = studentDataShas[className];
+                const message = `Update ${className} data via portal.`;
+                
+                // If the content is empty, check if we need to delete the file or just skip
+                if (Object.keys(students).length === 0) {
+                    if (currentSha) {
+                         // File exists on GitHub but we have no data - delete it.
+                        const newSha = await saveFileToRepo(GITHUB_REPO_EXAPP, filePath, null, currentSha, token, `Delete ${filePath} via portal.`, 'DELETE');
+                        studentDataShas[className] = null;
+                    }
+                    continue; // Skip PUT if no data and no existing file
+                }
+                
+                // Save/update file
+                const newSha = await saveFileToRepo(GITHUB_REPO_EXAPP, filePath, content, currentSha, token, message, 'PUT');
+                studentDataShas[className] = newSha; // Update the SHA for next save
+            }
+
+            // 2. Save Teacher Assignments
+            const teacherContent = teacherToCsv(SUBJECT_TEACHERS);
+            const newTeacherSha = await saveFileToRepo(GITHUB_REPO_EXAPP, TEACHER_FILE, teacherContent, teacherSha, token, 'Update teacher assignments.', 'PUT');
+            teacherSha = newTeacherSha;
+            
+            // 3. Save Admin Settings
+            const settingsContent = settingsToCsv(currentTerm, generalComment);
+            const newSettingsSha = await saveFileToRepo(GITHUB_REPO_EXAPP, ADMIN_SETTINGS_FILE, settingsContent, settingsSha, token, 'Update admin settings.', 'PUT');
+            settingsSha = newSettingsSha;
+
+            statusMsg.textContent = "✅ All data (Scores, Teachers, Settings) saved successfully to ExApp repo!";
+            statusMsg.style.color = 'lightgreen';
+            document.getElementById('githubToken').value = ''; // Clear token
+        } catch (error) {
+            statusMsg.textContent = `❌ Save failed: ${error.message}. Check console for details.`;
+            statusMsg.style.color = 'red';
+        }
+    }
+
+    /**
+     * NEW: Exports the Mark Sheet (raw scores and grades) for the currently selected class to the 'm' GitHub repository.
+     */
+    async function exportMarkSheetToMRepo() {
+        const selectedClass = document.getElementById('classSelect').value;
+        const studentsInClass = MOCK_STUDENTS_BY_CLASS[selectedClass];
         
-        if (scoreInput === 'X') return { grade: 'X', remark: 'No score' };
+        if (Object.keys(studentsInClass).length === 0) {
+            alert(`No student data found for ${selectedClass}.`);
+            return;
+        }
+        
+        const token = document.getElementById('githubToken').value.trim();
+        if (!token) {
+            alert("Please enter the GitHub PAT in the Admin Panel before saving to the 'm' repo.");
+            return;
+        }
+        
+        const saveButton = document.getElementById('saveMarkSheetToRepoButton');
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
 
-        score = parseInt(scoreInput);
+        try {
+            // Re-generate the CSV content specifically for the 'm' repo format
+            const content = studentsToCsv(studentsInClass);
+            const filePath = `${selectedClass}_m_scores.csv`; // A distinct file name in the 'm' repo
+            
+            // Fetch SHA from 'm' repo if it exists (no in-memory SHA tracking for 'm' repo yet)
+            const { sha: currentSha } = await fetchFileFromRepo(GITHUB_REPO_M, filePath); 
 
-        // Forms 1 and 2 Grading
+            // Save the file to the 'm' repo
+            const message = `Exported Mark Sheet for ${selectedClass} via portal.`;
+            await saveFileToRepo(GITHUB_REPO_M, filePath, content, currentSha, token, message, 'PUT');
+
+            alert(`Mark Sheet for ${selectedClass} successfully saved/updated in the '${GITHUB_REPO_M}' repository!`);
+
+        } catch (error) {
+            console.error("Export to 'm' repo failed:", error);
+            alert(`Failed to save to '${GITHUB_REPO_M}' repo: ${error.message}`);
+        } finally {
+            saveButton.textContent = "Save Scores to 'm' Repo";
+            saveButton.disabled = false;
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // --- CSV CONVERSION LOGIC (To/From GitHub Format) ---
+    // ----------------------------------------------------------------------
+    // Header structure for student data: ExNo, Name, Subject1_Score, Subject1_Grade, ...
+    const STUDENT_CSV_HEADERS = ["ExamNo", "Name"].concat(
+        ALL_SUBJECTS.flatMap(sub => [`${sub}_Score`, `${sub}_Grade`])
+    );
+
+    /**
+     * Converts the in-memory student data structure for a class into a CSV string.
+     */
+    function studentsToCsv(classData) {
+        let csv = [STUDENT_CSV_HEADERS.join(',')]; // Header row
+
+        Object.keys(classData).forEach(examNo => {
+            const student = classData[examNo];
+            let rowData = [
+                `"${student.ExamNo || examNo}"`,
+                `"${student.name.replace(/"/g, '""')}"` // Escape quotes in name
+            ];
+
+            ALL_SUBJECTS.forEach(subject => {
+                const score = student.scores[subject];
+                const grade = student.grades[subject];
+                
+                // Use empty string for null/undefined scores, otherwise use score/grade
+                rowData.push(score === undefined || score === null ? '' : score);
+                rowData.push(grade === undefined || grade === null ? '' : grade);
+            });
+
+            csv.push(rowData.join(','));
+        });
+
+        return csv.join('\n');
+    }
+
+    /**
+     * Parses a CSV string back into the in-memory student data structure.
+     */
+    function parseCsvToStudents(csvString, selectedClass) {
+        const students = {};
+        const lines = csvString.trim().split('\n').filter(line => line.trim() !== '');
+        
+        if (lines.length < 2) return students;
+
+        const header = lines[0].split(',').map(h => h.trim());
+        const dataLines = lines.slice(1);
+
+        dataLines.forEach(line => {
+            // Simple split assumes no escaped commas within fields other than name
+            const values = line.split(','); 
+            if (values.length < 2) return;
+
+            // Clean up ExamNo and Name (remove surrounding quotes)
+            const examNo = values[0].replace(/"/g, '').trim();
+            const studentName = values[1].replace(/"/g, '').trim();
+
+            if (!examNo || !studentName) return;
+
+            const student = {
+                ExamNo: examNo,
+                name: studentName,
+                Form: selectedClass,
+                scores: {},
+                grades: {}
+            };
+            
+            // Dynamically parse scores and grades based on header
+            ALL_SUBJECTS.forEach((subject, index) => {
+                const scoreHeader = `${subject}_Score`;
+                const gradeHeader = `${subject}_Grade`;
+                
+                // Calculate index for Score and Grade values in the row data
+                // ExamNo (1) + Name (1) + 2 * (index of subject) = start of score field
+                const scoreIndex = 2 + (index * 2);
+                const gradeIndex = scoreIndex + 1;
+
+                let scoreValue = values[scoreIndex] ? values[scoreIndex].replace(/"/g, '').trim() : '';
+                let gradeValue = values[gradeIndex] ? values[gradeIndex].replace(/"/g, '').trim() : '';
+
+                // Convert score to number if possible, or keep as 'X' or null/undefined
+                if (scoreValue === 'X' || scoreValue === 'x') {
+                    student.scores[subject] = 'X';
+                } else if (scoreValue !== '') {
+                    const scoreNum = parseInt(scoreValue);
+                    student.scores[subject] = isNaN(scoreNum) ? null : scoreNum;
+                } else {
+                    student.scores[subject] = null; // null for truly missing data
+                }
+                
+                // Store the grade as is
+                if (gradeValue !== '') {
+                    student.grades[subject] = gradeValue;
+                } else {
+                    student.grades[subject] = null;
+                }
+                
+            });
+            
+            students[examNo] = student;
+        });
+
+        return students;
+    }
+
+    function teacherToCsv(teachers) {
+        let csv = ["Subject,Teacher"];
+        Object.keys(teachers).forEach(subject => {
+            csv.push(`"${subject}","${teachers[subject].replace(/"/g, '""')}"`);
+        });
+        return csv.join('\n');
+    }
+
+    function parseTeacherCsv(csvString) {
+        const teachers = {};
+        const lines = csvString.trim().split('\n').slice(1); // Skip header
+
+        lines.forEach(line => {
+            const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
+            if (parts.length === 2) {
+                teachers[parts[0]] = parts[1];
+            }
+        });
+        return teachers;
+    }
+
+    function settingsToCsv(term, comment) {
+        return `Key,Value\nTerm,"${term}"\nComment,"${comment.replace(/"/g, '""')}"`;
+    }
+
+    function parseSettingsCsv(csvString) {
+        const settings = {};
+        const lines = csvString.trim().split('\n').slice(1);
+        lines.forEach(line => {
+            const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
+            if (parts.length === 2) {
+                // Use lowercase keys for consistency
+                settings[parts[0].toLowerCase()] = parts[1];
+            }
+        });
+        return settings;
+    }
+
+    // ----------------------------------------------------------------------
+    // --- UPDATED ADMIN PANEL LOGIC (using Refactored GitHub functions) ---
+    // ----------------------------------------------------------------------
+
+    // Updates the visibility of the Upload/Delete buttons based on file selection
+    function toggleUploadButton() {
+        const fileInput = document.getElementById('csvUpload');
+        const uploadButton = document.getElementById('uploadButton');
+        const deleteButton = document.getElementById('deleteCsvButton');
+        const msg = document.getElementById('assignmentMessage');
+        
+        // Delete button is enabled if the file's SHA is known (meaning it exists on GitHub)
+        const selectedClass = document.getElementById('csvClassSelect').value;
+        const hasSha = studentDataShas[selectedClass];
+        deleteButton.disabled = !hasSha;
+        
+        if (fileInput.files.length > 0) {
+            uploadButton.disabled = false;
+            msg.textContent = `File ready: ${fileInput.files[0].name}. Enter PAT and click 'Upload' to overwrite data on GitHub (in the ${GITHUB_REPO_EXAPP} repo).`;
+            msg.style.color = 'yellow';
+        } else {
+            uploadButton.disabled = true;
+            msg.textContent = 'Select a CSV file to enable the upload button.';
+            msg.style.color = 'lightgray';
+        }
+    }
+
+    /**
+     * Handles local CSV file upload, reads content, parses it, updates in-memory data, and uploads to GitHub.
+     */
+    async function handleCsvUpload() {
+        const fileInput = document.getElementById('csvUpload');
+        const file = fileInput.files[0];
+        const classSelect = document.getElementById('csvClassSelect');
+        const token = document.getElementById('githubToken').value.trim();
+        const msg = document.getElementById('assignmentMessage');
+        const selectedClass = classSelect.value;
+        
+        if (!file) {
+            msg.textContent = 'No file selected.';
+            msg.style.color = 'red';
+            return;
+        }
+        if (!token) {
+            alert("Please enter the GitHub PAT before attempting to upload.");
+            return;
+        }
+
+        const currentSha = studentDataShas[selectedClass];
+        
+        // Temporarily disable the button during upload
+        document.getElementById('uploadButton').disabled = true;
+
+        msg.textContent = `Reading ${file.name} for ${selectedClass}...`;
+        msg.style.color = 'yellow';
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const localContent = e.target.result;
+            
+            // 1. Parse the local CSV content
+            const students = parseCsvToStudents(localContent, selectedClass);
+            
+            // 2. Overwrite in-memory data
+            MOCK_STUDENTS_BY_CLASS[selectedClass] = students;
+            
+            // 3. Convert back to CSV for storage (ensuring consistent format)
+            const contentToSave = studentsToCsv(students);
+
+            // 4. Save to GitHub
+            const filePath = selectedClass + STUDENT_FILE_SUFFIX;
+            const message = `Upload student roster for ${selectedClass} via portal.`;
+            
+            try {
+                msg.textContent = `Uploading ${selectedClass} data to ${GITHUB_REPO_EXAPP} repo...`;
+                msg.style.color = 'yellow';
+                
+                const newSha = await saveFileToRepo(GITHUB_REPO_EXAPP, filePath, contentToSave, currentSha, token, message, 'PUT');
+                studentDataShas[selectedClass] = newSha;
+                
+                // Finalize UI update
+                updateStudentSelect(); // Update dropdowns with new data
+                msg.textContent = `✅ Successfully uploaded new roster for ${selectedClass} to ${GITHUB_REPO_EXAPP} repo! ${Object.keys(students).length} students loaded.`;
+                msg.style.color = 'lightgreen';
+                fileInput.value = '';
+                toggleUploadButton();
+            } catch (error) {
+                msg.textContent = `❌ Upload failed: ${error.message}`;
+                msg.style.color = 'red';
+                toggleUploadButton();
+            }
+        };
+
+        reader.onerror = function() {
+            msg.textContent = 'Error reading local file.';
+            msg.style.color = 'red';
+            toggleUploadButton();
+        };
+
+        reader.readAsText(file);
+    }
+
+    /**
+     * Deletes the student CSV file from the EXAPP GitHub repository.
+     */
+    async function deleteStudentCsv() {
+        const classSelect = document.getElementById('csvClassSelect');
+        const token = document.getElementById('githubToken').value.trim();
+        const msg = document.getElementById('assignmentMessage');
+        const selectedClass = classSelect.value;
+
+        if (!token) {
+            alert("Please enter the GitHub PAT before attempting to delete.");
+            return;
+        }
+
+        const currentSha = studentDataShas[selectedClass];
+        if (!currentSha) {
+            msg.textContent = `File for ${selectedClass} not found on GitHub.`;
+            msg.style.color = 'yellow';
+            return;
+        }
+
+        if (!confirm(`Are you SURE you want to DELETE the file for ${selectedClass} on ${GITHUB_REPO_EXAPP}? This cannot be undone.`)) {
+            return;
+        }
+
+        const filePath = selectedClass + STUDENT_FILE_SUFFIX;
+        try {
+            msg.textContent = `Deleting file ${filePath} from ${GITHUB_REPO_EXAPP} repo...`;
+            msg.style.color = 'yellow';
+
+            await saveFileToRepo(GITHUB_REPO_EXAPP, filePath, null, currentSha, token, `Delete ${filePath} via portal.`, 'DELETE');
+            
+            // Clear in-memory data and SHA
+            MOCK_STUDENTS_BY_CLASS[selectedClass] = {};
+            studentDataShas[selectedClass] = null; 
+            
+            // Finalize UI update
+            updateStudentSelect();
+            msg.textContent = `✅ Successfully deleted student roster file for ${selectedClass} from ${GITHUB_REPO_EXAPP} repo!`;
+            msg.style.color = 'lightgreen';
+            toggleUploadButton();
+        } catch (error) {
+            msg.textContent = `❌ Delete failed: ${error.message}`;
+            msg.style.color = 'red';
+            toggleUploadButton();
+        }
+    }
+
+    function updateAssignmentsDisplay() {
+        const display = document.getElementById('currentAssignments');
+        let html = '<strong>Current Teacher Assignments:</strong><br>';
+        let assignments = 0;
+        
+        ALL_SUBJECTS.forEach(subject => {
+            const teacher = SUBJECT_TEACHERS[subject];
+            if (teacher && teacher !== DEFAULT_TEACHER) {
+                html += `${subject}: ${teacher} | `;
+                assignments++;
+            }
+        });
+        
+        if (assignments === 0) {
+            html += 'No subjects currently assigned.';
+        }
+        display.innerHTML = html;
+    }
+
+    function assignTeacherToSubject() {
+        const subjectSelect = document.getElementById('assignSubjectSelect');
+        const teacherInput = document.getElementById('assignTeacherInput').value.trim();
+        const msg = document.getElementById('assignmentMessage');
+        
+        const subject = subjectSelect.value;
+        if (!subject) {
+            msg.textContent = 'Please select a subject.';
+            msg.style.color = 'red';
+            return;
+        }
+        
+        if (teacherInput === '--- CLEAR ASSIGNMENT ---' || teacherInput === '') {
+            delete SUBJECT_TEACHERS[subject];
+            msg.textContent = `${subject} assignment cleared.`;
+        } else {
+            SUBJECT_TEACHERS[subject] = teacherInput;
+            msg.textContent = `${teacherInput} assigned to ${subject}. (Remember to click 'Save ALL Data' to persist changes)`;
+        }
+        updateAssignmentsDisplay();
+        msg.style.color = 'lightgreen';
+        document.getElementById('assignTeacherInput').value = '';
+    }
+
+    // Updated: Save Admin settings (Term and Comment) to EXAPP
+    function saveAdminSettings() {
+        const termSelect = document.getElementById('termSelect');
+        const generalCommentInput = document.getElementById('generalComment');
+        const token = document.getElementById('githubToken').value.trim();
+        const msg = document.getElementById('persistenceMessage');
+        
+        // Update in-memory state
+        currentTerm = termSelect.value;
+        generalComment = generalCommentInput.value;
+
+        // Update the display immediately
+        const reportTermSpan = document.getElementById('reportTerm');
+        if (reportTermSpan) {
+            reportTermSpan.textContent = currentTerm;
+        }
+
+        // Auto-save settings to GitHub if token is available
+        if (token) {
+            msg.textContent = "Saving settings to ExApp repo...";
+            msg.style.color = 'yellow';
+            const settingsContent = settingsToCsv(currentTerm, generalComment);
+            
+            saveFileToRepo(GITHUB_REPO_EXAPP, ADMIN_SETTINGS_FILE, settingsContent, settingsSha, token, 'Update admin settings.', 'PUT')
+            .then(newSha => {
+                settingsSha = newSha;
+                alert('Settings updated and saved to ExApp repo!');
+                msg.textContent = "Settings saved to ExApp repo. Ready.";
+                msg.style.color = 'lightgreen';
+            })
+            .catch(error => {
+                alert(`Settings saved locally, but FAILED to save to ExApp repo: ${error.message}`);
+                msg.textContent = "Settings saved locally, but FAILED to save to ExApp repo.";
+                msg.style.color = 'red';
+            });
+        } else {
+            alert('Settings saved locally! Enter PAT and use "Save ALL Data" to persist on GitHub.');
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // --- GRADING / SCORE LOGIC (Unchanged) ---
+    // ----------------------------------------------------------------------
+    
+    /**
+     * Determines the grade and remark based on score and form.
+     */
+    function getGradeAndRemark(form, scoreInput) {
+        if (typeof scoreInput === 'string' && scoreInput.toUpperCase() === 'X') return { grade: 'X', remark: 'No score' };
+        
+        let score = parseInt(scoreInput);
+        if (isNaN(score)) return { grade: '-', remark: 'No score' };
+        
         if (form === 'Form1' || form === 'Form2') {
             if (score >= 80) return { grade: 'A', remark: 'Excellent' };
             if (score >= 65) return { grade: 'B', remark: 'Very Good' };
@@ -675,7 +1396,6 @@
             return { grade: 'F', remark: 'Fail' };
         }
 
-        // Forms 3 and 4 Grading (MSCE)
         if (form === 'Form3' || form === 'Form4') {
             if (score >= 80) return { grade: '1', remark: 'Distinction' };
             if (score >= 75) return { grade: '2', remark: 'Distinction' };
@@ -687,83 +1407,101 @@
             if (score >= 35) return { grade: '8', remark: 'Pass' };
             return { grade: '9', remark: 'Fail' };
         }
+
         return { grade: 'X', remark: 'Error' };
     }
 
+    /**
+     * Checks if a grade is a passing grade for the given form.
+     */
     function isPassingGrade(form, grade) {
         if (form === 'Form1' || form === 'Form2') {
             return ['A', 'B', 'C', 'D'].includes(grade);
         }
         if (form === 'Form3' || form === 'Form4') {
+            // Grades 1 through 8 are passing
             return ['1', '2', '3', '4', '5', '6', '7', '8'].includes(grade);
         }
         return false;
     }
 
-    // --- NAVIGATION AND INITIALIZATION (Unchanged) ---
-
-    function goToPage(pageId) {
-        document.querySelectorAll('.page').forEach(page => page.style.display = 'none');
-        
-        const targetPage = document.getElementById(pageId);
-        if (targetPage) {
-            if (pageId === 'frontPage' || pageId === 'dataEntry' || pageId === 'adminPanel') {
-                targetPage.style.display = 'flex'; 
-            } else {
-                targetPage.style.display = 'block';
+    /**
+     * Converts a grade to its numeric equivalent for ranking purposes.
+     */
+    function getNumericGradeForSorting(form, grade) {
+        if (form === 'Form1' || form === 'Form2') {
+            switch (grade) {
+                case 'A': return 1;
+                case 'B': return 2;
+                case 'C': return 3;
+                case 'D': return 4;
+                case 'F': return 5;
+                default: return 99; // Treat X or missing as worst possible for sorting
             }
         }
+        if (form === 'Form3' || form === 'Form4') {
+            const num = parseInt(grade);
+            return isNaN(num) ? 99 : num; // 1-9 are the grades
+        }
+        return 99;
     }
 
-    function init() {
-        // Populate Subject Dropdown (Data Entry)
-        const subjectSelect = document.getElementById('subjectSelect');
-        const subjectsHtml = ALL_SUBJECTS.map(sub => `<option value="${sub}">${sub}</option>`).join('');
-        subjectSelect.innerHTML = subjectsHtml;
-        
-        // Populate Subject Dropdown (Admin Panel)
-        const assignSubjectSelect = document.getElementById('assignSubjectSelect');
-        if (assignSubjectSelect) {
-            assignSubjectSelect.innerHTML = subjectsHtml;
-        }
+    // ----------------------------------------------------------------------
+    // --- CORE UI LOGIC (Unchanged / Minor additions) ---
+    // ----------------------------------------------------------------------
 
-        // Set up initial selectors
-        document.getElementById('classSelect').addEventListener('change', updateStudentSelect);
-        document.getElementById('examNoSelect').addEventListener('change', displayStudentName);
-
-        // Initial population
-        updateStudentSelect(); 
-        goToPage('frontPage');
-        
-        // Initialize Admin Assignments Display
-        updateAssignmentsDisplay();
-        
-        // Set the Term selector to the current term on load
-        document.getElementById('reportTerm').textContent = currentTerm;
-        const termSelect = document.getElementById('termSelect');
-        if (termSelect) {
-            termSelect.value = currentTerm;
+    /**
+     * Reusable function to navigate between pages.
+     */
+    function goToPage(pageId) {
+        document.querySelectorAll('.page').forEach(page => {
+            page.style.display = 'none';
+        });
+        const targetPage = document.getElementById(pageId);
+        if (targetPage) {
+            // Apply flex display for centered pages, otherwise block
+            targetPage.style.display = (pageId === 'frontPage' || pageId === 'dataEntry' || pageId === 'adminPanel' || pageId === 'dataAnalysis') ? 'flex' : 'block';
+            window.scrollTo(0, 0); // Scroll to top on page change
         }
     }
-    
-    // Updates the Exam Number dropdown based on the selected class
+
+    function getStudent(examNo) {
+        if (!examNo) return null;
+        const students = MOCK_STUDENTS_BY_CLASS[currentClass] || {};
+        return students[examNo] || null;
+    }
+
+    function updateSubjectSelect() {
+        const select = document.getElementById('subjectSelect');
+        const assignSelect = document.getElementById('assignSubjectSelect');
+        
+        select.innerHTML = '';
+        assignSelect.innerHTML = '';
+        
+        ALL_SUBJECTS.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject;
+            option.textContent = subject;
+            select.appendChild(option);
+
+            const assignOption = option.cloneNode(true);
+            assignSelect.appendChild(assignOption);
+        });
+    }
+
     function updateStudentSelect() {
-        const classSelect = document.getElementById('classSelect');
+        currentClass = document.getElementById('classSelect').value;
+        const students = MOCK_STUDENTS_BY_CLASS[currentClass] || {};
         const examNoSelect = document.getElementById('examNoSelect');
-        currentClass = classSelect.value;
-        
-        const studentsInClass = MOCK_STUDENTS_BY_CLASS[currentClass] || {};
         
         examNoSelect.innerHTML = '';
-        const examNumbers = Object.keys(studentsInClass);
-        
+        const examNumbers = Object.keys(students).sort();
+
         if (examNumbers.length > 0) {
             examNumbers.forEach(examNo => {
-                const student = studentsInClass[examNo];
                 const option = document.createElement('option');
                 option.value = examNo;
-                // Only display the Exam Number
-                option.textContent = `${examNo}`; 
+                option.textContent = `${examNo}`;
                 examNoSelect.appendChild(option);
             });
             selectedExamNo = examNumbers[0];
@@ -771,34 +1509,32 @@
             examNoSelect.innerHTML = '<option value="">No Students</option>';
             selectedExamNo = null;
         }
-
         displayStudentName();
     }
 
-    // --- FRONT PAGE LOGIC (Unchanged) ---
-
+    // Front Page Logic
     function login() {
         const password = document.getElementById('password').value;
         const msg = document.getElementById('loginMessage');
         
-        if (password === '001') {
-             msg.textContent = 'Use the Admin Button from the Data Entry page.';
-             msg.style.color = 'red';
-             return;
+        // This is the message directing users to the Admin Button
+        if (password === '001') { 
+            msg.textContent = 'Use the Admin Button from the Data Entry page.';
+            msg.style.color = 'red';
+            return;
         }
-
+        
         if (password === '') {
-            msg.textContent = 'Please enter credentials.';
+            msg.textContent = 'Please enter password.';
             msg.style.color = 'red';
             return;
         }
         
         msg.textContent = '';
-        goToPage('dataEntry'); 
+        goToPage('dataEntry');
     }
 
-    // --- DATA ENTRY LOGIC (Unchanged) ---
-
+    // Data Entry Logic
     function displayStudentName() {
         selectedExamNo = document.getElementById('examNoSelect').value;
         const student = getStudent(selectedExamNo);
@@ -820,14 +1556,13 @@
         }
 
         let score, grade, remark;
-        
         if (scoreInput === 'X') {
-            score = 'X';
+            score = 'X'; 
             grade = 'X';
             remark = 'No score';
         } else if (scoreInput === '' || scoreInput === '-') {
-            score = null;
-            grade = '-';
+            score = null; 
+            grade = '-'; 
             remark = 'No score';
         } else {
             score = parseInt(scoreInput);
@@ -836,286 +1571,120 @@
                 msg.style.color = 'red';
                 return;
             }
-            const result = getGradeAndRemark(form, score);
-            grade = result.grade;
-            remark = result.remark;
+            ({ grade, remark } = getGradeAndRemark(form, score));
         }
 
+        // Update in-memory data
         student.scores[subject] = score;
         student.grades[subject] = grade;
 
-        msg.textContent = `Score of ${scoreInput} (${grade}) submitted for ${student.name} in ${subject}.`;
+        msg.textContent = `✅ Score ${scoreInput || 'cleared'} for ${student.name} (${subject}). (Click 'Save ALL Data' in Admin to persist)`;
         msg.style.color = 'lightgreen';
         
-        document.getElementById('scoreInput').value = ''; 
+        // Clear input after successful submission
+        document.getElementById('scoreInput').value = '';
     }
-    
-    // --- ADMIN PANEL LOGIC (CSV UPLOAD FIX AND REFACTOR) ---
-    
-    /**
-     * Checks if a file is selected and toggles the upload button's enabled state.
-     */
-    function toggleUploadButton() {
-        const fileInput = document.getElementById('csvUpload');
-        const uploadButton = document.getElementById('uploadButton');
-        const msg = document.getElementById('assignmentMessage'); 
-
-        if (fileInput.files.length > 0) {
-            uploadButton.disabled = false;
-            msg.textContent = `File ready: ${fileInput.files[0].name}. Click 'Upload' to process.`;
-            msg.style.color = 'yellow';
-        } else {
-            uploadButton.disabled = true;
-            msg.textContent = 'Select a CSV file to enable the upload button.';
-            msg.style.color = 'lightgray';
-        }
-    }
-
 
     /**
-     * Handles the CSV file upload from the Admin Panel, parses the student list,
-     * and updates the MOCK_STUDENTS_BY_CLASS for the selected class.
+     * MODIFIED: Prompts for the Admin password '001' before accessing the Admin Panel.
      */
-    function handleCsvUpload() {
-        const classSelect = document.getElementById('csvClassSelect');
-        const fileInput = document.getElementById('csvUpload');
-        const msg = document.getElementById('assignmentMessage'); 
-        const selectedClass = classSelect.value;
-        const file = fileInput.files[0];
-
-        // The button should be disabled if no file is selected, but this is a final check.
-        if (!file) {
-            msg.textContent = 'ERROR: No file selected. Please choose a CSV file first.';
-            msg.style.color = 'red';
-            document.getElementById('uploadButton').disabled = true;
-            return;
-        }
-
-        if (file.type && file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-             msg.textContent = 'Invalid file type. Please upload a .csv file.';
-             msg.style.color = 'red';
-             return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-            const content = e.target.result;
-            
-            // Assuming the CSV format is: "Exam Number,Student Name" followed by data lines
-            const lines = content.trim().split('\n').filter(line => line.trim() !== '');
-            if (lines.length < 2) {
-                msg.textContent = 'CSV file is empty or malformed.';
-                msg.style.color = 'red';
-                return;
-            }
-
-            // Simple header parsing (case insensitive, space agnostic)
-            const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s/g, ''));
-            const examNoIndex = header.indexOf('examnumber');
-            const nameIndex = header.indexOf('studentname');
-
-            if (examNoIndex === -1 || nameIndex === -1) {
-                msg.textContent = 'CSV missing "Exam Number" or "Student Name" header.';
-                msg.style.color = 'red';
-                return;
-            }
-
-            // Clear existing students for the selected class before adding new ones
-            MOCK_STUDENTS_BY_CLASS[selectedClass] = {};
-            let count = 0;
-
-            for (let i = 1; i < lines.length; i++) {
-                // Handle potential commas within student names by only splitting on the first line
-                // For simplicity, we assume no quotes and exactly 2 columns in all lines.
-                const values = lines[i].split(',');
-                if (values.length > 1) {
-                    const examNo = values[examNoIndex].trim();
-                    const studentName = values[nameIndex].trim();
-                    
-                    if (examNo && studentName) {
-                        // Add or overwrite student data, preserving form data
-                        MOCK_STUDENTS_BY_CLASS[selectedClass][examNo] = { 
-                            name: studentName, 
-                            Form: selectedClass, 
-                            scores: {}, 
-                            grades: {} 
-                        };
-                        count++;
-                    }
-                }
-            }
-
-            // IMPORTANT: Update all selectors on the data entry page
-            updateStudentSelect();
-            
-            msg.textContent = `Successfully uploaded and added ${count} students to ${selectedClass}.`;
-            msg.style.color = 'lightgreen';
-            fileInput.value = ''; // Clear file input after successful upload
-            toggleUploadButton(); // Reset the button to disabled state
-        };
-
-        reader.onerror = function() {
-            msg.textContent = 'Error reading file.';
-            msg.style.color = 'red';
-        };
-
-        reader.readAsText(file);
-    }
-
     function showAdminPrompt() {
-        const password = prompt("Enter Admin Password (001):");
-        if (password === '001') {
-            goToPage('adminPanel');
-            // Ensure button state is checked immediately upon entering the panel
-            toggleUploadButton(); 
-        } else if (password !== null) {
-            alert('Incorrect password.');
-        }
-    }
-    
-    function updateAssignmentsDisplay() {
-        const displayDiv = document.getElementById('currentAssignments');
-        if (!displayDiv) return;
-
-        let html = '<strong>Current Assignments:</strong><br>';
-        let assignmentsFound = false;
-        
-        const sortedSubjects = ALL_SUBJECTS.sort(); 
-        
-        sortedSubjects.forEach(subject => {
-            const teacher = SUBJECT_TEACHERS[subject];
-            if (teacher) {
-                html += `${subject}: ${teacher}<br>`;
-                assignmentsFound = true;
-            }
-        });
-
-        if (!assignmentsFound) {
-            html += `No specific subject teachers assigned. Default report value is '${DEFAULT_TEACHER}'.`; 
-        }
-        
-        displayDiv.innerHTML = html;
-    }
-
-    function assignTeacherToSubject() {
-        const subject = document.getElementById('assignSubjectSelect').value;
-        // MODIFIED: Get value from the text input
-        const teacherInput = document.getElementById('assignTeacherInput').value.trim();
-        const msg = document.getElementById('assignmentMessage');
-
-        if (teacherInput === '--- CLEAR ASSIGNMENT ---' || teacherInput === '') {
-            delete SUBJECT_TEACHERS[subject];
-            msg.textContent = `${subject} assignment cleared.`;
-        } else {
-            SUBJECT_TEACHERS[subject] = teacherInput;
-            msg.textContent = `${teacherInput} assigned to ${subject}.`;
-        }
-        
-        updateAssignmentsDisplay();
-        msg.style.color = 'lightgreen';
-        document.getElementById('assignTeacherInput').value = ''; // Clear input after submission
-    }
-    
-    // NEW FUNCTION: Save Admin settings (Term and Comment)
-    function saveAdminSettings() {
-        // Save the selected term
-        const termSelect = document.getElementById('termSelect');
-        if (termSelect) {
-            currentTerm = termSelect.value;
-            // Update the display immediately if they view a report without reloading
-            const reportTermSpan = document.getElementById('reportTerm');
-            if (reportTermSpan) {
-                reportTermSpan.textContent = currentTerm;
-            }
-        }
-        
-        // Comment saving (optional, just to keep the original logic)
-        // const generalComment = document.getElementById('generalComment').value; 
-        
-        alert('Settings saved!');
+         const adminPassword = prompt("Enter the Admin password to access file management settings:");
+         
+         if (adminPassword === '001') {
+             goToPage('adminPanel');
+         } else if (adminPassword !== null) { // User clicked OK but entered wrong password
+             alert("Incorrect Admin password.");
+         }
+         // If adminPassword is null, user clicked Cancel, so do nothing.
     }
 
 
-    // --- EXPORT FUNCTIONS (Unchanged) ---
-
+    // Export Logic
     function exportTableData(tableId, filenamePrefix, type) {
         const table = document.getElementById(tableId);
-        if (!table || table.rows.length <= 1) {
-            alert(filenamePrefix.includes("MarkSheet") ? 'Mark Sheet is empty.' : 'Grade Sheet is empty.');
-            return;
-        }
+        if (!table) return;
 
-        const selectedClass = document.getElementById('classSelect').value;
-        const filename = `${filenamePrefix}_${selectedClass}`;
-        
+        const delimiter = (type === 'csv' || type === 'excel') ? ',' : '\t';
         let csv = [];
-        const delimiter = ','; // Using comma for standard CSV export
+        
+        // Helper function to handle cell content for export
+        const cleanText = (text) => {
+            // Replace newlines and quotes within text
+            text = text.replace(/\n/g, " ").replace(/"/g, '""');
+            // Wrap in quotes if it contains delimiter or spaces/special chars
+            return (text.includes(delimiter) || text.includes(' ') || text.includes(',')) ? `"${text}"` : text;
+        };
 
-        // 1. Get Headers (all <th> elements)
-        const headers = Array.from(table.tHead.rows[0].cells).map(cell => cell.textContent.trim());
-        csv.push(headers.join(delimiter));
+        // Get header rows
+        table.querySelectorAll('thead tr').forEach(row => {
+            let rowData = [];
+            row.querySelectorAll('th').forEach(cell => {
+                rowData.push(cleanText(cell.textContent));
+            });
+            csv.push(rowData.join(delimiter));
+        });
 
-        // 2. Get Data Rows (all <td> elements in tbody)
-        Array.from(table.tBodies[0].rows).forEach(row => {
-            const rowData = Array.from(row.cells).map(cell => {
-                let text = cell.textContent.trim();
-                // Basic CSV escaping: escape quotes and wrap in quotes if the text contains the delimiter
-                if (text.includes(delimiter) || text.includes('"') || text.includes('\n')) {
-                    text = `"${text.replace(/"/g, '""')}"`;
+        // Get body rows
+        table.querySelectorAll('tbody tr').forEach(row => {
+            let rowData = [];
+            row.querySelectorAll('td').forEach(cell => {
+                let text = cell.textContent || cell.innerText;
+                // For Mark/Grade sheets, clean up special characters
+                if (tableId === 'gradesTable' || tableId === 'marksTable') {
+                     // Keep numbers, 'X', or '-' as is, clean others
+                     if (text !== 'X' && text !== '-' && !/^\d+(\.\d+)?$/.test(text)) {
+                         text = text.trim().replace(/\s/g, ' '); // Normalize spaces
+                     }
                 }
-                return text;
+                
+                rowData.push(cleanText(text));
             });
             csv.push(rowData.join(delimiter));
         });
 
         const csvString = csv.join('\n');
-        
-        // 3. Trigger Download
         let mimeType, fileExtension;
+        
         if (type === 'csv') {
             mimeType = 'text/csv;charset=utf-8;';
             fileExtension = 'csv';
-        } else if (type === 'excel') { 
-            // Using application/vnd.ms-excel with .xls extension often forces Excel to open it correctly
+        } else if (type === 'excel') {
+            // This is a common way to trigger Excel download with a CSV-like file
             mimeType = 'application/vnd.ms-excel;charset=utf-8;'; 
             fileExtension = 'xls'; 
         } else {
             return;
         }
 
-        // Use encodeURIComponent for robustness
         const encodedUri = encodeURIComponent(csvString);
         const link = document.createElement("a");
-        
-        // Data URI format for download
-        link.setAttribute("href", 'data:' + mimeType + ',' + encodedUri);
-        link.setAttribute("download", `${filename}.${fileExtension}`);
+        // For Excel, prepend the BOM for proper encoding recognition
+        const hrefData = (type === 'excel' ? 'data:text/csv;charset=utf-8,' + encodedUri : 'data:' + mimeType + ',' + encodedUri);
+
+        link.setAttribute("href", hrefData);
+        link.setAttribute("download", `${filenamePrefix}.${fileExtension}`);
         
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        alert(`Exported ${filenamePrefix} as ${filename}.${fileExtension}!`);
+        alert(`Exported ${filenamePrefix} as ${filenamePrefix}.${fileExtension}!`);
     }
 
-    // --- SHEET VIEW LOGIC (Corrected to calculate Average/Aggregate and use hyphen) ---
-
+    // Sheet View Logic - Fixed viewGradesSheet
     function viewGradesSheet() {
         const selectedClass = document.getElementById('classSelect').value;
         const studentsInClass = MOCK_STUDENTS_BY_CLASS[selectedClass] || {};
-        const MIN_SUBJECTS = 6; 
-
+        const MIN_SUBJECTS = 6;
         document.getElementById('gradesSheetClass').textContent = selectedClass;
+        const isUpperForm = selectedClass === 'Form3' || selectedClass === 'Form4';
         
-        const isUpperForm = (selectedClass === 'Form3' || selectedClass === 'Form4');
-        const finalColumnHeader = isUpperForm ? 'Aggregate' : 'Average';
-
         const table = document.getElementById('gradesTable');
-        table.innerHTML = ''; 
+        table.innerHTML = '';
+        
         const thead = table.createTHead();
         const headerRow = thead.insertRow();
-        
         headerRow.insertCell().textContent = 'Ex No';
         headerRow.insertCell().textContent = 'Name';
         
@@ -1123,94 +1692,131 @@
             headerRow.insertCell().textContent = subject;
         });
         
-        headerRow.insertCell().textContent = finalColumnHeader;
-
-        const tbody = table.createTBody();
+        if (isUpperForm) {
+            headerRow.insertCell().textContent = 'Aggregate';
+        } else {
+            headerRow.insertCell().textContent = 'Average';
+        }
         
+        const tbody = table.createTBody();
+        let classMetrics = []; // To store calculated metric for ranking/display
+        
+        // 0. Calculate Metrics (Average/Aggregate) for all students first
+        Object.keys(studentsInClass).forEach(examNo => {
+            const student = studentsInClass[examNo];
+            let totalScore = 0;
+            let subjectsCounted = 0;
+            let gradesList = [];
+            let metric = null;
+            
+            // 1. Calculate Score/Grade Data
+            ALL_SUBJECTS.forEach(subject => {
+                const score = student.scores[subject];
+                if (typeof score === 'number' && score >= 0 && score <= 100) {
+                    subjectsCounted++;
+                    if (!isUpperForm) {
+                        totalScore += score;
+                    } else {
+                        const { grade } = getGradeAndRemark(student.Form, score);
+                        const numericGrade = getNumericGradeForSorting(student.Form, grade);
+                        gradesList.push({ grade: grade, subject: subject, numericGrade: numericGrade });
+                    }
+                }
+            });
+
+            // 2. Calculate Metric (Average or Aggregate)
+            if (subjectsCounted >= MIN_SUBJECTS) {
+                if (!isUpperForm) {
+                    metric = totalScore / subjectsCounted; // Average
+                } else {
+                    // Aggregate calculation logic (Best 6 including mandatory English pass)
+                    gradesList.sort((a, b) => a.numericGrade - b.numericGrade);
+                    const englishGradeEntry = gradesList.find(g => g.subject === 'English');
+                    
+                    if (englishGradeEntry && isPassingGrade(student.Form, englishGradeEntry.grade)) {
+                        let bestSixGrades = gradesList.slice(0, 6);
+                        
+                        // Ensure English is one of the grades counted if it wasn't already in the top 6
+                        if (!bestSixGrades.some(g => g.subject === 'English')) {
+                            // Find the worst grade currently in the best six
+                            const worstOfBestIndex = bestSixGrades.reduce((worstIndex, g, index) => g.numericGrade > bestSixGrades[worstIndex].numericGrade ? index : worstIndex, 0);
+                            
+                            // Replace the worst of the best six with the English grade (since English is mandatory for aggregate)
+                            bestSixGrades[worstOfBestIndex] = englishGradeEntry;
+                            bestSixGrades.sort((a, b) => a.numericGrade - b.numericGrade); // Re-sort for safety/correctness
+                        }
+                        
+                        aggregateValue = bestSixGrades.slice(0, 6).reduce((sum, g) => sum + g.numericGrade, 0);
+                        metric = aggregateValue;
+                    } 
+                    // If not enough subjects/English not passed, metric remains null (cannot be ranked)
+                }
+            }
+
+            classMetrics.push({ examNo: examNo, metric: metric });
+        });
+        
+        // 3. Sort students by metric for implicit ranking (used later by progress report)
+        classMetrics.sort((a, b) => {
+            if (a.metric === null && b.metric === null) return 0;
+            if (a.metric === null) return 1; // Null metrics go to the bottom
+            if (b.metric === null) return -1; // Null metrics go to the bottom
+            
+            if (isUpperForm) {
+                return a.metric - b.metric; // Aggregate (lower is better)
+            } else {
+                return b.metric - a.metric; // Average (higher is better)
+            }
+        });
+        
+        // Now, iterate through students to populate table rows
         Object.keys(studentsInClass).forEach(examNo => {
             const student = studentsInClass[examNo];
             const row = tbody.insertRow();
             row.insertCell().textContent = examNo;
             row.insertCell().textContent = student.name;
 
-            let subjectsCounted = 0;
-            let totalScore = 0;
-            let gradesList = [];
-            
+            // Subject Grades
             ALL_SUBJECTS.forEach(subject => {
                 const score = student.scores[subject];
-                const grade = student.grades[subject] || '-';
+                const { grade } = getGradeAndRemark(student.Form, score);
                 row.insertCell().textContent = grade;
-                
-                if (typeof score === 'number' && score >= 0 && score <= 100) {
-                    subjectsCounted++;
-                    totalScore += score;
-                    if (isUpperForm) {
-                         const numericGrade = getNumericGradeForSorting(student.Form, grade);
-                         gradesList.push({ grade: grade, subject: subject, numericGrade: numericGrade });
-                    }
-                }
             });
-            
-            let metricDisplay = '-'; // Default to hyphen
 
-            if (subjectsCounted >= MIN_SUBJECTS) {
-                if (!isUpperForm) {
-                    // Forms 1/2: Average 
-                    metricDisplay = (totalScore / subjectsCounted).toFixed(2);
+            // Average/Aggregate Metric Display
+            let metricDisplay = '-';
+            const metricEntry = classMetrics.find(m => m.examNo === examNo);
+            if (metricEntry && metricEntry.metric !== null) {
+                if (isUpperForm) {
+                    metricDisplay = metricEntry.metric; // Aggregate (number)
                 } else {
-                    // Forms 3/4: Aggregate 
-                    gradesList.sort((a, b) => a.numericGrade - b.numericGrade);
-                    const englishGradeEntry = gradesList.find(g => g.subject === 'English');
-
-                    if (englishGradeEntry && isPassingGrade(student.Form, englishGradeEntry.grade)) {
-                        let bestSixGrades = gradesList.slice(0, 6);
-                        
-                        // Ensure English is in the top 6 if passed
-                        if (!bestSixGrades.some(g => g.subject === 'English')) {
-                            const worstOfBestIndex = 5; 
-                            bestSixGrades[worstOfBestIndex] = englishGradeEntry;
-                            bestSixGrades.sort((a, b) => a.numericGrade - b.numericGrade); 
-                        }
-                        
-                        // Recalculate best six after potential English insertion
-                        const finalBestSix = bestSixGrades.slice(0, 6);
-                        
-                        metricDisplay = finalBestSix.reduce((sum, g) => sum + g.numericGrade, 0);
-                    } else {
-                        // English failed or not taken, or other ranking criteria not met: put hyphen
-                        metricDisplay = '-'; 
-                    }
+                    metricDisplay = metricEntry.metric.toFixed(2); // Average (2 decimal places)
                 }
-            } 
-
-            row.insertCell().textContent = metricDisplay; 
+            }
+            row.insertCell().textContent = metricDisplay;
         });
 
         goToPage('gradesSheet');
     }
 
-
     function viewMarkSheet() {
         const selectedClass = document.getElementById('classSelect').value;
         const studentsInClass = MOCK_STUDENTS_BY_CLASS[selectedClass] || {};
-        
         document.getElementById('markSheetClass').textContent = selectedClass;
-
+        
         const table = document.getElementById('marksTable');
-        table.innerHTML = ''; 
+        table.innerHTML = '';
+        
         const thead = table.createTHead();
         const headerRow = thead.insertRow();
-        
         headerRow.insertCell().textContent = 'Ex No';
         headerRow.insertCell().textContent = 'Name';
         
         ALL_SUBJECTS.forEach(subject => {
             headerRow.insertCell().textContent = subject;
         });
-
-        const tbody = table.createTBody();
         
+        const tbody = table.createTBody();
         Object.keys(studentsInClass).forEach(examNo => {
             const student = studentsInClass[examNo];
             const row = tbody.insertRow();
@@ -1218,78 +1824,32 @@
             row.insertCell().textContent = student.name;
 
             ALL_SUBJECTS.forEach(subject => {
-                const score = student.scores[subject] || '-';
-                row.insertCell().textContent = score;
+                // Display score or '-'
+                const score = student.scores[subject];
+                let displayScore = (score === null || score === undefined) ? '-' : score;
+                if (displayScore === 'X') displayScore = 'X';
+                
+                row.insertCell().textContent = displayScore;
             });
         });
 
         goToPage('markSheet');
     }
-    
-    // --- RANKING LOGIC FUNCTIONS (Implementation added for functional Progress Report) ---
 
-    /**
-     * Calculates a student's rank for a specific subject (competition ranking).
-     */
-    function calculateSubjectRank(className, subject, targetScore) {
-        if (targetScore === null || targetScore === undefined || targetScore === 'X' || typeof targetScore !== 'number') {
-            return { rank: '-', totalStudents: 0 };
-        }
-
-        const studentsInClass = MOCK_STUDENTS_BY_CLASS[className] || {};
-        const scores = [];
-
-        // 1. Collect all valid scores for the subject in the class
-        Object.keys(studentsInClass).forEach(examNo => {
-            const student = studentsInClass[examNo];
-            const score = student.scores[subject];
-            if (typeof score === 'number' && score >= 0 && score <= 100) {
-                scores.push(score);
-            }
-        });
-
-        const totalStudents = scores.length;
-        if (totalStudents === 0) {
-            return { rank: '-', totalStudents: 0 };
-        }
+    function calculateOverallClassRank(classSelected, targetExamNo) {
+        const studentsInClass = MOCK_STUDENTS_BY_CLASS[classSelected] || {};
+        const isUpperForm = classSelected === 'Form3' || classSelected === 'Form4';
+        const MIN_SUBJECTS = 6;
         
-        // 2. Sort scores in descending order
-        scores.sort((a, b) => b - a);
+        let classMetrics = [];
         
-        // 3. Find the rank (competition ranking: 1, 1, 1, 4, 5...)
-        let rank = 1;
-        for (let i = 0; i < totalStudents; i++) {
-            // Update rank only if the score is lower than the previous one
-            if (i > 0 && scores[i] < scores[i-1]) {
-                rank = i + 1;
-            }
-            
-            // If the current score matches the target score, this is the rank.
-            if (scores[i] === targetScore) {
-                return { rank: rank, totalStudents: totalStudents };
-            }
-        }
-        
-        return { rank: '-', totalStudents: totalStudents }; 
-    }
-
-    /**
-     * Calculates a student's overall class rank (competition ranking) based on Average/Aggregate.
-     */
-    function calculateOverallClassRank(className, targetExamNo) {
-        const studentsInClass = MOCK_STUDENTS_BY_CLASS[className] || {};
-        const classMetrics = [];
-        const isUpperForm = (className === 'Form3' || className === 'Form4');
-        const MIN_SUBJECTS = 6; 
-
-        // 1. Calculate the ranking metric (Average or Aggregate) for all students
         Object.keys(studentsInClass).forEach(examNo => {
             const student = studentsInClass[examNo];
             let totalScore = 0;
             let subjectsCounted = 0;
             let gradesList = [];
-            let metric = null; // null means not rankable 
-
+            let metric = null;
+            
             ALL_SUBJECTS.forEach(subject => {
                 const score = student.scores[subject];
                 if (typeof score === 'number' && score >= 0 && score <= 100) {
@@ -1306,106 +1866,54 @@
 
             if (subjectsCounted >= MIN_SUBJECTS) {
                 if (!isUpperForm) {
-                    // Forms 1/2: Average (Higher is better)
                     metric = totalScore / subjectsCounted;
                 } else {
-                    // Forms 3/4: Aggregate (Lower is better)
+                    // Aggregate calculation logic (Best 6 including mandatory English pass)
                     gradesList.sort((a, b) => a.numericGrade - b.numericGrade);
                     const englishGradeEntry = gradesList.find(g => g.subject === 'English');
                     
                     if (englishGradeEntry && isPassingGrade(student.Form, englishGradeEntry.grade)) {
-                        
                         let bestSixGrades = gradesList.slice(0, 6);
                         
-                        // Ensure English is considered if passed
                         if (!bestSixGrades.some(g => g.subject === 'English')) {
-                            const worstOfBestIndex = 5; 
+                            const worstOfBestIndex = bestSixGrades.reduce((worstIndex, g, index) => g.numericGrade > bestSixGrades[worstIndex].numericGrade ? index : worstIndex, 0);
                             bestSixGrades[worstOfBestIndex] = englishGradeEntry;
-                            bestSixGrades.sort((a, b) => a.numericGrade - b.numericScore); 
+                            bestSixGrades.sort((a, b) => a.numericGrade - b.numericGrade);
                         }
-
-                        // Take the sum of the top 6 numeric grades for aggregate
+                        
                         aggregateValue = bestSixGrades.slice(0, 6).reduce((sum, g) => sum + g.numericGrade, 0);
-                        metric = aggregateValue; 
-                    }
+                        finalMetric = aggregateValue;
+                        metric = finalMetric;
+                    } 
                 }
             }
-            
             classMetrics.push({ examNo: examNo, metric: metric });
         });
 
-        // 2. Sort the metrics for ranking
-        classMetrics.sort((a, b) => {
-            // Null metrics go to the end (not rankable)
-            if (a.metric === null && b.metric === null) return 0;
-            if (a.metric === null) return 1; 
-            if (b.metric === null) return -1; 
-            
+        // Filter out students who couldn't be ranked (metric is null)
+        const rankableStudents = classMetrics.filter(m => m.metric !== null);
+        const totalStudents = rankableStudents.length;
+
+        // Sort for ranking (Avg: high to low; Agg: low to high)
+        rankableStudents.sort((a, b) => {
             if (isUpperForm) {
-                return a.metric - b.metric; // Aggregate: Lower is better (ascending)
+                return a.metric - b.metric; // Aggregate: lower is better
             } else {
-                return b.metric - a.metric; // Average: Higher is better (descending)
+                return b.metric - a.metric; // Average: higher is better
             }
         });
 
-        // 3. Find the student's rank 
-        let rank = 1;
-        let totalRankableStudents = classMetrics.filter(m => m.metric !== null).length;
-        
-        for (let i = 0; i < totalRankableStudents; i++) {
-            const studentMetricEntry = classMetrics[i];
-            
-            const isDifferent = isUpperForm 
-                ? (i > 0 && classMetrics[i].metric > classMetrics[i - 1].metric) 
-                : (i > 0 && classMetrics[i].metric < classMetrics[i - 1].metric); 
-            
-            if (isDifferent) {
-                 rank = i + 1;
-            }
-
-            if (studentMetricEntry.examNo === targetExamNo) {
-                if (studentMetricEntry.metric === null) {
-                    return { rank: 'N/A', totalStudents: totalRankableStudents };
-                }
-                return { rank: rank, totalStudents: totalRankableStudents };
-            }
+        // Determine rank for the target student
+        const targetEntry = rankableStudents.find(m => m.examNo === targetExamNo);
+        let rank = 'N/A';
+        if (targetEntry) {
+            const targetMetric = targetEntry.metric;
+            // Handle ties: find the first position with the same metric
+            const targetIndex = rankableStudents.findIndex(m => m.metric === targetMetric);
+            rank = targetIndex + 1;
         }
-        
-        return { rank: 'N/A', totalStudents: totalRankableStudents }; 
-    }
 
-
-    // --- PROGRESS REPORT LOGIC (Updated to use functional ranking) ---
-
-    function saveProgressReportAsPDF() {
-        const examNo = document.getElementById('examNoSelect').value;
-        const student = getStudent(examNo);
-        
-        if (!student) {
-            alert('Please select a student first.');
-            return;
-        }
-        
-        // 1. Construct the desired filename/title
-        const originalTitle = document.title;
-        // Clean up the name for file use (simple replacement of spaces with underscores)
-        const studentName = student.name.replace(/\s+/g, '_');
-        // MODIFIED: Include term in the filename
-        const newTitle = `Progress_Report_Term${currentTerm}_${student.Form}_${studentName}_${examNo}`;
-
-        // 2. Temporarily change the document title
-        document.title = newTitle;
-
-        // 3. Trigger the browser's print/save dialog
-        window.print();
-        
-        // 4. Restore the original title immediately
-        setTimeout(() => {
-            document.title = originalTitle;
-        }, 100); 
-
-        // Also display the alert (optional, since print dialog is already opened)
-        alert('Saving as PDF...');
+        return { rank: rank, totalStudents: totalStudents };
     }
 
 
@@ -1418,30 +1926,28 @@
             alert(`Please select a valid Exam Number for ${classSelected} to generate the progress report.`);
             return;
         }
-
+        
         const form = student.Form;
-        const MIN_SUBJECTS = 6; 
+        const MIN_SUBJECTS = 6;
+        const isUpperForm = form === 'Form3' || form === 'Form4';
 
-        // 1. Update Student Details
         document.getElementById('reportStudentName').textContent = student.name;
         document.getElementById('reportExamNo').textContent = examNo;
         document.getElementById('reportForm').textContent = form.replace('Form', '');
-        // MODIFIED: Use the currentTerm variable
         document.getElementById('reportTerm').textContent = currentTerm;
-        
-        // 2. Populate Results Table
+
         const tbody = document.getElementById('reportBody');
         tbody.innerHTML = '';
-
+        
         let totalScore = 0;
         let subjectsCounted = 0;
         let passingSubjects = 0;
         let englishPassed = false;
-        let gradesList = [];
-        
-        // The value of generalComment is dynamic from the Admin Panel's textarea
-        const generalComment = document.getElementById('generalComment').value || 'No comment entered by teacher.';
+        let gradesList = []; // For aggregate calculation
 
+        const generalCommentDisplay = generalComment || 'No comment entered by teacher.';
+
+        // Populate Subject/Score Table
         ALL_SUBJECTS.forEach(subject => {
             const row = tbody.insertRow();
             const score = student.scores[subject];
@@ -1449,101 +1955,94 @@
             
             let displayScore = (score === null || score === undefined) ? '-' : score;
             if (displayScore === 'X') displayScore = 'X';
+            
+            const teacher = SUBJECT_TEACHERS[subject] || DEFAULT_TEACHER;
+
+            row.insertCell().textContent = subject;
+            row.insertCell().textContent = displayScore;
+            row.insertCell().textContent = grade;
+            // Position column is filled after ranking is calculated
+            const positionCell = row.insertCell();
+            positionCell.textContent = '-'; 
+            row.insertCell().textContent = remark;
+            row.insertCell().textContent = teacher;
+
 
             if (typeof score === 'number' && score >= 0 && score <= 100) {
                 totalScore += score;
                 subjectsCounted++;
                 
-                const numericGrade = getNumericGradeForSorting(form, grade);
-                gradesList.push({ grade: grade, subject: subject, numericGrade: numericGrade });
-
                 if (isPassingGrade(form, grade)) {
                     passingSubjects++;
                 }
+                
                 if (subject === 'English' && isPassingGrade(form, grade)) {
                     englishPassed = true;
                 }
+                
+                // Collect grades for aggregate/average calculation
+                const numericGrade = getNumericGradeForSorting(form, grade);
+                gradesList.push({ grade: grade, subject: subject, numericGrade: numericGrade });
             }
-            
-            // Get the assigned teacher for the subject, or use the hyphen default
-            const subjectTeacher = SUBJECT_TEACHERS[subject] || DEFAULT_TEACHER; 
-
-            // Calculate Subject Position
-            let positionContent;
-            if (typeof score === 'number' && score >= 0 && score <= 100) {
-                const { rank, totalStudents } = calculateSubjectRank(form, subject, score);
-                // Position is shown as Rank/Total_Students_Ranked
-                positionContent = `${rank}/${totalStudents}`;
-            } else {
-                positionContent = '-';
-            }
-
-            row.insertCell().textContent = subject;
-            row.insertCell().textContent = displayScore;
-            row.insertCell().textContent = grade;
-            // Display calculated subject rank/total
-            row.insertCell().textContent = positionContent; 
-            row.insertCell().textContent = remark;
-            row.insertCell().textContent = subjectTeacher; 
-
         });
+
+        // 2. Calculate Final Metric (Average/Aggregate) and Position
+        let overallRemark = 'Fail';
+        let finalMetric = null; 
         
-        // 3. Calculate Summary (Average/Aggregate) 
+        const averageLine = document.getElementById('averageLine');
+        const aggregateLine = document.getElementById('aggregateLine');
         
-        let averageValue = '-'; // Changed from 'N/A' to '-'
-        let aggregateValue = '-'; // Changed from 'N/A' to '-'
-        const isUpperForm = (form === 'Form3' || form === 'Form4');
+        // Hide both by default
+        averageLine.classList.add('hidden');
+        aggregateLine.classList.add('hidden');
 
         if (subjectsCounted >= MIN_SUBJECTS) {
             if (!isUpperForm) {
-                averageValue = (totalScore / subjectsCounted).toFixed(2);
-            }
-            
-            if (isUpperForm) {
+                // Forms 1 & 2: Average and Pass/Fail based on % passing subjects
+                finalMetric = totalScore / subjectsCounted;
+                document.getElementById('reportAverage').textContent = finalMetric.toFixed(2);
+                averageLine.classList.remove('hidden');
+                
+                // Simple Pass based on 50% subjects passed (e.g. 6/11)
+                if (passingSubjects >= Math.ceil(ALL_SUBJECTS.length / 2)) {
+                    overallRemark = 'Pass';
+                }
+                
+            } else {
+                // Forms 3 & 4: Aggregate and English pass is mandatory
                 gradesList.sort((a, b) => a.numericGrade - b.numericGrade);
                 const englishGradeEntry = gradesList.find(g => g.subject === 'English');
-                
-                if (englishGradeEntry && isPassingGrade(form, englishGradeEntry.grade)) { 
-                    
+
+                if (englishGradeEntry && englishPassed) {
                     let bestSixGrades = gradesList.slice(0, 6);
                     
                     if (!bestSixGrades.some(g => g.subject === 'English')) {
-                        const worstOfBestIndex = 5; 
+                        const worstOfBestIndex = bestSixGrades.reduce((worstIndex, g, index) => g.numericGrade > bestSixGrades[worstIndex].numericGrade ? index : worstIndex, 0);
                         bestSixGrades[worstOfBestIndex] = englishGradeEntry;
-                        bestSixGrades.sort((a, b) => a.numericGrade - b.numericGrade); 
+                        bestSixGrades.sort((a, b) => a.numericGrade - b.numericGrade);
                     }
+                    
+                    const aggregateValue = bestSixGrades.slice(0, 6).reduce((sum, g) => sum + g.numericGrade, 0);
+                    finalMetric = aggregateValue;
 
-                    aggregateValue = bestSixGrades.slice(0, 6).reduce((sum, g) => sum + g.numericGrade, 0);
-                } else {
-                    aggregateValue = '-';
+                    document.getElementById('reportAggregate').textContent = finalMetric;
+                    aggregateLine.classList.remove('hidden');
+                }
+                
+                if (finalMetric !== null && finalMetric <= 48 && englishPassed) { // Aggregate 48 is the technical pass mark (6 subjects * grade 8)
+                     overallRemark = 'Pass';
                 }
             }
-        } 
-
-
-        document.getElementById('reportAverage').textContent = averageValue;
-        document.getElementById('reportAggregate').textContent = aggregateValue;
-        
-        // 4. Handle Visibility (Average vs Aggregate)
-        document.getElementById('averageLine').classList.toggle('hidden', isUpperForm);
-        document.getElementById('aggregateLine').classList.toggle('hidden', !isUpperForm);
-
-        // 5. Overall Remark
-        let overallRemark = 'Fail';
-        if (passingSubjects >= MIN_SUBJECTS && englishPassed) {
-             overallRemark = 'Pass';
         }
+        
         document.getElementById('reportOverallRemark').textContent = overallRemark;
         
-        // CORRECTED: Calculate and display the actual Overall Class Position (Rank/Total)
         const { rank: overallRank, totalStudents: totalRankableStudents } = calculateOverallClassRank(classSelected, examNo);
         document.getElementById('reportPosition').textContent = `${overallRank}/${totalRankableStudents}`;
 
-        // 6. Comment
-        document.getElementById('reportComment').textContent = generalComment;
+        document.getElementById('reportComment').textContent = generalCommentDisplay;
 
-
-        // 7. NEW: Generate and insert Grade Key Table
         const gradeKeyData = isUpperForm ? GRADE_KEY_F3_F4 : GRADE_KEY_F1_F2;
         
         let keyHtml = `
@@ -1557,7 +2056,6 @@
                 </thead>
                 <tbody>`;
         
-        // Generate the 5 rows of grading data
         gradeKeyData.forEach(item => {
             keyHtml += `
                 <tr>
@@ -1569,10 +2067,141 @@
         
         keyHtml += `</tbody></table>`;
         
-        // Insert the HTML into the placeholder
         document.getElementById('gradeKeyPlaceholder').innerHTML = keyHtml;
 
         goToPage('progressReport');
+    }
+
+    /**
+     * Performs class data analysis and displays results table.
+     */
+    function analyzeData() {
+        const selectedClass = document.getElementById('analysisClassSelect').value;
+        const studentsInClass = MOCK_STUDENTS_BY_CLASS[selectedClass] || {};
+        const table = document.getElementById('analysisTable');
+        document.getElementById('analysisClassDisplay').textContent = selectedClass;
+
+        const isUpperForm = selectedClass === 'Form3' || selectedClass === 'Form4';
+
+        // 1. Define Row Keys
+        const gradeKeys = isUpperForm ? ['1', '2', '3', '4', '5', '6', '7', '8', '9'] : ['A', 'B', 'C', 'D', 'F'];
+        const summaryKeys = ['Absent', 'Sat for Exam', 'Passed', 'Failed', 'Pass %', 'Fail %'];
+        const allRowKeys = gradeKeys.concat(summaryKeys);
+
+        // Initialize analysis object structure: { Subject: { Grade: count, Absent: count, ... } }
+        let analysis = {};
+        ALL_SUBJECTS.forEach(subject => {
+            analysis[subject] = {};
+            allRowKeys.forEach(key => analysis[subject][key] = 0);
+        });
+
+        // 2. Perform Calculation (Loop through students and subjects)
+        Object.keys(studentsInClass).forEach(examNo => {
+            const student = studentsInClass[examNo];
+            
+            ALL_SUBJECTS.forEach(subject => {
+                const score = student.scores[subject];
+                
+                // Check for Absent/Missing
+                if (score === 'X' || score === null || score === undefined || score === '') {
+                    analysis[subject]['Absent']++;
+                    return;
+                }
+                
+                const numericScore = parseInt(score);
+                if (isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
+                     return;
+                }
+                
+                analysis[subject]['Sat for Exam']++;
+                
+                // Get Grade and check Pass/Fail
+                const { grade } = getGradeAndRemark(selectedClass, numericScore);
+                const isPassing = isPassingGrade(selectedClass, grade);
+                
+                // Count Grade
+                if (gradeKeys.includes(grade)) {
+                    analysis[subject][grade]++;
+                }
+                
+                // Count Pass/Fail
+                if (isPassing) {
+                    analysis[subject]['Passed']++;
+                } else {
+                    analysis[subject]['Failed']++;
+                }
+            });
+        });
+
+        // 3. Calculate Percentages
+        ALL_SUBJECTS.forEach(subject => {
+            const satCount = analysis[subject]['Sat for Exam'];
+            const passedCount = analysis[subject]['Passed'];
+            const failedCount = analysis[subject]['Failed'];
+            
+            if (satCount > 0) {
+                // Pass % and Fail % are calculated from those who sat for the exam
+                analysis[subject]['Pass %'] = ((passedCount / satCount) * 100).toFixed(1) + '%';
+                analysis[subject]['Fail %'] = ((failedCount / satCount) * 100).toFixed(1) + '%';
+            } else {
+                analysis[subject]['Pass %'] = '-';
+                analysis[subject]['Fail %'] = '-';
+            }
+        });
+
+        // 4. Build and Display Table
+        table.innerHTML = '';
+        const thead = table.createTHead();
+        const tbody = table.createTBody();
+
+        // Header Row (12 columns: GRADES + 11 Subjects)
+        const headerRow = thead.insertRow();
+        headerRow.insertCell().textContent = 'GRADES'; // Column 1
+        ALL_SUBJECTS.forEach(subject => {
+            headerRow.insertCell().textContent = subject; // Columns 2-12
+        });
+
+        // Data Rows
+        allRowKeys.forEach(rowKey => {
+            const row = tbody.insertRow();
+            
+            // First column: Row label (Grade or Summary Key)
+            row.insertCell().textContent = rowKey; 
+            
+            // Subject columns: Data counts/percentages
+            ALL_SUBJECTS.forEach(subject => {
+                let cellValue = analysis[subject][rowKey];
+                
+                // Apply styling to highlight Pass/Fail percentages
+                if (rowKey === 'Pass %' || rowKey === 'Fail %') {
+                    const cell = row.insertCell();
+                    cell.textContent = cellValue;
+                    const percent = parseFloat(cellValue);
+                    
+                    if (rowKey === 'Pass %') {
+                        if (percent >= 75) cell.style.backgroundColor = '#28a745'; // Darker Green
+                        else if (percent >= 50) cell.style.backgroundColor = '#d4edda'; // Light green
+                        else if (percent > 0) cell.style.backgroundColor = '#fff3cd'; // Yellowish
+                    } else if (rowKey === 'Fail %') {
+                        if (percent >= 50) cell.style.backgroundColor = '#dc3545'; // Darker Red
+                        else if (percent > 0) cell.style.backgroundColor = '#f8d7da'; // Light red
+                    }
+                    cell.style.color = (percent >= 75 && rowKey === 'Pass %') ? 'white' : (percent >= 50 && rowKey === 'Fail %') ? 'white' : 'black'; // Ensure text is visible
+                } else {
+                     row.insertCell().textContent = cellValue;
+                }
+            });
+        });
+
+        goToPage('dataAnalysisResults');
+    }
+    // ----------------------------------------------------------------------
+    // --- INITIALIZATION ---
+    // ----------------------------------------------------------------------
+
+    async function init() {
+        // Load data first
+        await loadAllDataFromExAppRepo(); 
     }
 
     // Initialize the application when the page loads

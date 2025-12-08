@@ -4,20 +4,18 @@
     "dob": "12/04/2008",
     "scores": {
       "Agriculture": 0,
-      "Bible Knowledge": 23,
-      "Biology": 24,
-      "Chemistry": 43,
+      "Bible Knowledge": 0,
+      "Biology": 0,
+      "Chemistry": 0,
       "Chichewa": 0,
-      "English": 12,
-      "Geography": 23,
+      "English": 0,
+      "Geography": 0,
       "History": 0,
-      "Mathematics": 43,
+      "Mathematics": 0,
       "Physics": 0,
       "Social": 0
     },
-    "comments": {
-      "Term 3": ""
-    }
+    "comments": {}
   },
   "M047/002": {
     "name": "ACKIM SCHOLARSTICA",

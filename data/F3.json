@@ -1,22 +1,4 @@
 {
-  "EXAM NO": {
-    "name": "Name",
-    "dob": "DOB",
-    "scores": {
-      "Agriculture": 0,
-      "Bible Knowledge": 0,
-      "Biology": 0,
-      "Chemistry": 0,
-      "Chichewa": 0,
-      "English": 0,
-      "Geography": 0,
-      "History": 0,
-      "Mathematics": 0,
-      "Physics": 0,
-      "Social": 0
-    },
-    "comments": {}
-  },
   "M047/001": {
     "name": "ABRAHAM ALICE",
     "dob": "12/04/2008",

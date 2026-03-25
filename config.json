@@ -1,0 +1,76 @@
+{
+  "term": "1",
+  "generalComment": "Put more effort on the subjects not done well.",
+  "gradeKeyLower": {
+    "A": 80,
+    "B": 65,
+    "C": 55,
+    "D": 40,
+    "F": 0
+  },
+  "gradeKeyUpper": {
+    "1": 80,
+    "2": 75,
+    "3": 70,
+    "4": 65,
+    "5": 60,
+    "6": 55,
+    "7": 45,
+    "8": 35,
+    "9": 0
+  },
+  "teachers": {
+    "form1": {
+      "Agriculture": "-",
+      "Bible Knowledge": "-",
+      "Biology": "-",
+      "Chemistry": "-",
+      "Chichewa": "-",
+      "English": "-",
+      "Geography": "-",
+      "History": "-",
+      "Mathematics": "-",
+      "Physics": "-",
+      "Social/Life": "-"
+    },
+    "form2": {
+      "Agriculture": "-",
+      "Bible Knowledge": "-",
+      "Biology": "-",
+      "Chemistry": "-",
+      "Chichewa": "-",
+      "English": "-",
+      "Geography": "-",
+      "History": "-",
+      "Mathematics": "-",
+      "Physics": "-",
+      "Social/Life": "-"
+    },
+    "form3": {
+      "Agriculture": "-",
+      "Bible Knowledge": "-",
+      "Biology": "-",
+      "Chemistry": "-",
+      "Chichewa": "-",
+      "English": "-",
+      "Geography": "-",
+      "History": "-",
+      "Mathematics": "-",
+      "Physics": "-",
+      "Social/Life": "-"
+    },
+    "form4": {
+      "Agriculture": "-",
+      "Bible Knowledge": "-",
+      "Biology": "-",
+      "Chemistry": "-",
+      "Chichewa": "-",
+      "English": "-",
+      "Geography": "-",
+      "History": "-",
+      "Mathematics": "-",
+      "Physics": "-",
+      "Social/Life": "-"
+    }
+  }
+}

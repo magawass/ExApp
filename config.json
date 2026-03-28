@@ -72,5 +72,6 @@
       "Physics": "-",
       "Social/Life": "-"
     }
-  }
+  },
+  "passwordEnabled": false
 }

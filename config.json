@@ -1,10 +1,11 @@
 {
   "term": "1",
+  "year": "2026",
   "generalComment": "Put more effort on the subjects not done well.",
-  "nextTermOpens": "6th may 2026",
+  "nextTermOpens": "6th May 2026",
   "fees": "K180,000.00",
   "gradeKeyLower": {
-    "A": 70,
+    "A": 80,
     "B": 65,
     "C": 55,
     "D": 40,
